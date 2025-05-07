@@ -1,0 +1,55 @@
+[gd_scene load_steps=7 format=3 uid="uid://bskgno25qnevg"]
+
+[ext_resource type="PackedScene" uid="uid://dico8utbs8fic" path="res://instances/player.tscn" id="1_tbgi4"]
+[ext_resource type="Texture2D" uid="uid://c7p635nif6wmj" path="res://assets/kenney_simple-space/PNG/Default/meteor_large.png" id="2_tbgi4"]
+[ext_resource type="Texture2D" uid="uid://devg61hqqtgp1" path="res://assets/kenney_simple-space/PNG/Default/meteor_squareDetailedSmall.png" id="3_tefeu"]
+[ext_resource type="Texture2D" uid="uid://c68h07t30rp0f" path="res://assets/kenney_simple-space/PNG/Default/meteor_squareLarge.png" id="4_o6xl0"]
+[ext_resource type="Texture2D" uid="uid://cuf0qr28i0xo8" path="res://assets/kenney_simple-space/PNG/Default/meteor_detailedLarge.png" id="5_tipki"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tbgi4"]
+size = Vector2(38, 37)
+
+[node name="Node2D" type="Node2D"]
+
+[node name="Player" parent="." instance=ExtResource("1_tbgi4")]
+position = Vector2(149, 249)
+
+[node name="StaticBody2D2" type="StaticBody2D" parent="."]
+position = Vector2(272, 488)
+
+[node name="MeteorDetailedLarge" type="Sprite2D" parent="StaticBody2D2"]
+texture = ExtResource("5_tipki")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D2"]
+position = Vector2(1, -0.5)
+shape = SubResource("RectangleShape2D_tbgi4")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="."]
+position = Vector2(136, 244)
+
+[node name="MeteorLarge" type="Sprite2D" parent="StaticBody2D"]
+texture = ExtResource("2_tbgi4")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
+position = Vector2(1, -0.5)
+shape = SubResource("RectangleShape2D_tbgi4")
+
+[node name="StaticBody2D3" type="StaticBody2D" parent="."]
+position = Vector2(765, 136)
+
+[node name="MeteorSquareLarge" type="Sprite2D" parent="StaticBody2D3"]
+texture = ExtResource("4_o6xl0")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D3"]
+position = Vector2(1, -0.5)
+shape = SubResource("RectangleShape2D_tbgi4")
+
+[node name="StaticBody2D4" type="StaticBody2D" parent="."]
+position = Vector2(824, 439)
+
+[node name="MeteorSquareDetailedSmall" type="Sprite2D" parent="StaticBody2D4"]
+texture = ExtResource("3_tefeu")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D4"]
+position = Vector2(1, -0.5)
+shape = SubResource("RectangleShape2D_tbgi4")
