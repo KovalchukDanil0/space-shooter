@@ -1,25 +1,27 @@
 use godot::{
-    classes::{CharacterBody2D, ICharacterBody2D, Input, InputEvent},
+    classes::{CharacterBody2D, ICharacterBody2D, Input, InputEvent, Marker2D, Window},
     global::{absf, atan2, clampf, signf, wrapf},
+    obj::BaseRef,
     prelude::*,
 };
 use std::{f32::consts::TAU, f64::consts::PI};
 
-use crate::bullet::Bullet;
+use crate::{bullet::Bullet, ui::UI};
 
 #[derive(GodotClass)]
 #[class(base=CharacterBody2D)]
 pub struct Player {
-    #[export]
     speed: f32,
-
-    #[export]
     speed_acceleration: f32,
+    speed_rotation: f32,
 
-    #[export]
-    rotation_speed: f32,
+    health: i32,
+
+    root: Option<Gd<Window>>,
+    ui_canvas: Option<Gd<UI>>,
 
     bullet: Gd<PackedScene>,
+    bullet_spawn: Option<Gd<Marker2D>>,
 
     base: Base<CharacterBody2D>,
 }
@@ -35,14 +37,31 @@ impl ICharacterBody2D for Player {
         Player {
             speed: 400.0,
             speed_acceleration: 2.0,
-            rotation_speed: TAU * 2.0,
+            speed_rotation: TAU * 2.0,
+
+            health: 3,
+
+            root: None,
+            ui_canvas: None,
+
             bullet: load::<PackedScene>("res://instances/bullet.tscn"),
+            bullet_spawn: None,
+
             base,
         }
     }
 
-    fn unhandled_input(&mut self, event: Gd<InputEvent>) {
-        let player: Gd<CharacterBody2D> = self.base_mut().clone();
+    fn ready(&mut self) {
+        let mut tree: Gd<SceneTree> = self.base().get_tree().unwrap();
+        self.root = tree.get_root();
+
+        self.ui_canvas = Some(tree.get_first_node_in_group("ui").unwrap().cast::<UI>());
+
+        self.bullet_spawn = Some(self.base().get_node_as::<Marker2D>("BulletSpawn"));
+    }
+
+    fn input(&mut self, event: Gd<InputEvent>) {
+        let player: BaseRef<'_, Player> = self.base();
 
         if event.is_action_pressed("ui_accept") {
             // Fix: use self.bullet instead of undefined scene variable
@@ -53,16 +72,11 @@ impl ICharacterBody2D for Player {
 
             let player_rotation: f32 = player.get_rotation();
 
-            bullet.set_global_position(player.get_global_position());
+            bullet.set_global_position(self.bullet_spawn.clone().unwrap().get_global_position());
             bullet.set_rotation_degrees(player.get_rotation_degrees() + 90.0);
             bullet.set_velocity(Vector2::from_angle(player_rotation).normalized_or_zero());
 
-            player
-                .get_tree()
-                .unwrap()
-                .get_root()
-                .unwrap()
-                .add_child(&bullet);
+            self.root.as_mut().unwrap().add_child(&bullet);
         }
     }
 
@@ -81,25 +95,42 @@ impl ICharacterBody2D for Player {
             PI,
         );
         player.rotate(
-            clampf(self.get_rotation_speed() as f64 * delta, 0.0, absf(theta)) as f32
+            clampf(self.speed_rotation as f64 * delta, 0.0, absf(theta)) as f32
                 * signf(theta) as f32,
         );
 
         // move player with controls using move_and_collide
         let new_velocity = Vector2::lerp(
             current_velocity,
-            velocity * self.get_speed(),
-            self.get_speed_acceleration() * delta as f32,
+            velocity * self.speed,
+            self.speed_acceleration * delta as f32,
         );
         player.set_velocity(new_velocity);
 
         // Perform collision detection
         if let Some(collision) = player.move_and_collide(new_velocity * delta as f32) {
-            // Handle collision logic here if needed
-            godot_print!(
-                "Collision detected with: {:?}",
-                collision.get_collider().unwrap()
-            );
+            self.take_damage(1);
+
+            collision.get_collider().unwrap().free();
         }
+    }
+}
+
+#[godot_api]
+impl Player {
+    #[func]
+    pub fn get_health(&mut self) -> i32 {
+        self.health
+    }
+
+    #[func]
+    fn take_damage(&mut self, amount: i32) {
+        self.ui_canvas
+            .as_mut()
+            .unwrap()
+            .bind_mut()
+            .change_health(amount);
+
+        self.health -= amount
     }
 }

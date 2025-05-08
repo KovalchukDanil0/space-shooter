@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://doghw687efpw2"]
+
+[node name="UI" type="UI" groups=["ui"]]
+
+[node name="HealthContainer" type="HBoxContainer" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 20.0
+offset_bottom = 53.0
+theme_override_constants/separation = 15

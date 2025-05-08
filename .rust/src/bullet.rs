@@ -1,5 +1,5 @@
 use godot::{
-    classes::{CharacterBody2D, ICharacterBody2D, SceneTreeTimer},
+    classes::{CharacterBody2D, ICharacterBody2D, Timer},
     obj::BaseRef,
     prelude::*,
 };
@@ -8,19 +8,13 @@ use godot::{
 #[class(base=CharacterBody2D)]
 pub struct Bullet {
     speed: f32,
-    lifetime: f64,
-
     base: Base<CharacterBody2D>,
 }
 
 #[godot_api]
 impl ICharacterBody2D for Bullet {
     fn init(base: Base<CharacterBody2D>) -> Self {
-        Bullet {
-            speed: 400.0,
-            lifetime: 5.0,
-            base,
-        }
+        Bullet { speed: 400.0, base }
     }
 
     fn ready(&mut self) {
@@ -29,19 +23,13 @@ impl ICharacterBody2D for Bullet {
         let on_timer_timeout = {
             let mut bullet: Gd<CharacterBody2D> = bullet.clone();
             move |_: &[&Variant]| -> Result<Variant, ()> {
-                // attempted to free already freed reference
                 bullet.queue_free();
 
                 Ok(Variant::nil())
             }
         };
 
-        // Create a properly connected timer
-        let mut timer: Gd<SceneTreeTimer> = bullet
-            .get_tree()
-            .unwrap()
-            .create_timer(self.lifetime)
-            .unwrap();
+        let mut timer: Gd<Timer> = self.base().get_node_as::<Timer>("DeleteTimer");
 
         // Create a proper callable that can be used with connect
         let callable: Callable = Callable::from_local_fn("on_timer_timeout", on_timer_timeout);

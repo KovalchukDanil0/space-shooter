@@ -12,3 +12,6 @@ macos.debug =            "res://.rust/target/debug/libspace_shooter.dylib"
 macos.release =          "res://.rust/target/release/libspace_shooter.dylib"
 macos.debug.arm64 =      "res://.rust/target/debug/libspace_shooter.dylib"
 macos.release.arm64 =    "res://.rust/target/release/libspace_shooter.dylib"
+
+[icons]
+Player = "res://icon.svg"

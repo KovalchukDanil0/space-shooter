@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://dcdcem8yedejx"]
+
+[ext_resource type="Texture2D" uid="uid://kjaiynm8j1gk" path="res://assets/kenney_space-shooter-redux/PNG/UI/playerLife1_orange.png" id="1_cebgk"]
+
+[node name="TextureRect" type="TextureRect"]
+offset_right = 33.0
+offset_bottom = 26.0
+texture = ExtResource("1_cebgk")
