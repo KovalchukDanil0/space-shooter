@@ -1,0 +1,21 @@
+[gd_scene load_steps=3 format=3 uid="uid://db1857d55f75x"]
+
+[ext_resource type="Texture2D" uid="uid://c68h07t30rp0f" path="res://assets/kenney_simple-space/PNG/Default/meteor_squareLarge.png" id="1_w6oe7"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tbgi4"]
+size = Vector2(38, 37)
+
+[node name="Meteor" type="Meteor"]
+gravity_scale = 0.0
+
+[node name="MeteorSquareLarge" type="Sprite2D" parent="."]
+texture = ExtResource("1_w6oe7")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_tbgi4")
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-20, -20, 40, 40)
+
+[node name="DeleteTimer" type="Timer" parent="."]
+one_shot = true

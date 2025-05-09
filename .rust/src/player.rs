@@ -1,10 +1,12 @@
 use godot::{
-    classes::{CharacterBody2D, ICharacterBody2D, Input, InputEvent, Marker2D, Window},
+    classes::{
+        CharacterBody2D, ICharacterBody2D, Input, Marker2D, RandomNumberGenerator, Timer, Window,
+    },
     global::{absf, atan2, clampf, signf, wrapf},
     obj::BaseRef,
     prelude::*,
 };
-use std::{f32::consts::TAU, f64::consts::PI};
+use std::{f32, f64};
 
 use crate::{bullet::Bullet, ui::UI};
 
@@ -17,18 +19,18 @@ pub struct Player {
 
     health: i32,
 
-    root: Option<Gd<Window>>,
-    ui_canvas: Option<Gd<UI>>,
+    root: OnReady<Gd<Window>>,
+    ui_canvas: OnReady<Gd<UI>>,
 
-    bullet: Gd<PackedScene>,
-    bullet_spawn: Option<Gd<Marker2D>>,
+    bullet_instance: OnReady<Gd<PackedScene>>,
+    bullet_spawn: OnReady<Gd<Marker2D>>,
+
+    spread: f32,
+
+    fire_delay: f64,
+    fire_delay_timer: OnReady<Gd<Timer>>,
 
     base: Base<CharacterBody2D>,
-}
-
-fn get_input() -> Vector2 {
-    let input: Gd<Input> = Input::singleton();
-    input.get_vector("move_left", "move_right", "move_up", "move_down")
 }
 
 #[godot_api]
@@ -37,69 +39,66 @@ impl ICharacterBody2D for Player {
         Player {
             speed: 400.0,
             speed_acceleration: 2.0,
-            speed_rotation: TAU * 2.0,
+            speed_rotation: f32::consts::TAU * 2.0,
 
             health: 3,
 
-            root: None,
-            ui_canvas: None,
+            root: OnReady::from_base_fn(|base: &Gd<Node>| {
+                base.get_tree().unwrap().get_root().unwrap()
+            }),
+            ui_canvas: OnReady::from_base_fn(|base: &Gd<Node>| {
+                base.get_tree()
+                    .unwrap()
+                    .get_first_node_in_group("ui")
+                    .unwrap()
+                    .cast::<UI>()
+            }),
 
-            bullet: load::<PackedScene>("res://instances/bullet.tscn"),
-            bullet_spawn: None,
+            bullet_instance: OnReady::new(|| load("res://instances/bullet.tscn")),
+            bullet_spawn: OnReady::node("BulletSpawnPoint"),
+
+            spread: 0.1,
+
+            fire_delay: 0.2,
+            fire_delay_timer: OnReady::node("FireDelayTimer"),
 
             base,
         }
     }
 
     fn ready(&mut self) {
-        let mut tree: Gd<SceneTree> = self.base().get_tree().unwrap();
-        self.root = tree.get_root();
-
-        self.ui_canvas = Some(tree.get_first_node_in_group("ui").unwrap().cast::<UI>());
-
-        self.bullet_spawn = Some(self.base().get_node_as::<Marker2D>("BulletSpawn"));
-    }
-
-    fn input(&mut self, event: Gd<InputEvent>) {
-        let player: BaseRef<'_, Player> = self.base();
-
-        if event.is_action_pressed("ui_accept") {
-            // Fix: use self.bullet instead of undefined scene variable
-            let instance: Gd<Node> = self.bullet.instantiate().unwrap();
-
-            // Assuming the instantiated scene root is a Node2D
-            let mut bullet: Gd<Bullet> = instance.try_cast::<Bullet>().unwrap();
-
-            let player_rotation: f32 = player.get_rotation();
-
-            bullet.set_global_position(self.bullet_spawn.clone().unwrap().get_global_position());
-            bullet.set_rotation_degrees(player.get_rotation_degrees() + 90.0);
-            bullet.set_velocity(Vector2::from_angle(player_rotation).normalized_or_zero());
-
-            self.root.as_mut().unwrap().add_child(&bullet);
-        }
+        // setting up timer
+        self.fire_delay_timer.set_wait_time(self.fire_delay);
     }
 
     fn process(&mut self, delta: f64) {
-        // character body properties
+        let input: Gd<Input> = Input::singleton();
+
+        // shoot with timeout
+        if input.is_action_pressed("ui_accept") && self.fire_delay_timer.is_stopped() {
+            self.fire_delay_timer.start();
+
+            self.shoot();
+        }
+
         let mut player: Gd<CharacterBody2D> = self.base_mut().clone();
 
+        let velocity: Vector2 = self.get_input(&input);
         let current_velocity: Vector2 = player.get_velocity();
-        let velocity: Vector2 = get_input();
         let rotation: f64 = player.get_rotation() as f64;
 
         // rotation to player movement direction logic
         let theta: f64 = wrapf(
             atan2(current_velocity.y as f64, current_velocity.x as f64) - rotation,
-            -PI,
-            PI,
+            -f64::consts::PI,
+            f64::consts::PI,
         );
         player.rotate(
             clampf(self.speed_rotation as f64 * delta, 0.0, absf(theta)) as f32
                 * signf(theta) as f32,
         );
 
-        // move player with controls using move_and_collide
+        // move player and check collision
         let new_velocity = Vector2::lerp(
             current_velocity,
             velocity * self.speed,
@@ -107,7 +106,6 @@ impl ICharacterBody2D for Player {
         );
         player.set_velocity(new_velocity);
 
-        // Perform collision detection
         if let Some(collision) = player.move_and_collide(new_velocity * delta as f32) {
             self.take_damage(1);
 
@@ -118,19 +116,49 @@ impl ICharacterBody2D for Player {
 
 #[godot_api]
 impl Player {
-    #[func]
     pub fn get_health(&mut self) -> i32 {
         self.health
     }
 
-    #[func]
+    /// Player take damage based on given amount
     fn take_damage(&mut self, amount: i32) {
-        self.ui_canvas
-            .as_mut()
-            .unwrap()
-            .bind_mut()
-            .change_health(amount);
+        self.ui_canvas.bind_mut().change_health(amount);
 
-        self.health -= amount
+        self.health -= amount;
+
+        if self.health <= 0 {
+            self.base_mut().queue_free();
+        }
+    }
+
+    /// Get vector of movement keys
+    fn get_input(&mut self, input: &Gd<Input>) -> Vector2 {
+        input.get_vector("move_left", "move_right", "move_up", "move_down")
+    }
+
+    /// Shoot bullet_instance, apply spreading
+    fn shoot(&mut self) {
+        let instance: Gd<Node> = self.bullet_instance.instantiate().unwrap();
+
+        let base: BaseRef<'_, Player> = self.base();
+        let player_rotation: f32 = base.get_rotation();
+
+        let mut bullet: Gd<Bullet> = instance.try_cast::<Bullet>().unwrap();
+
+        // setting global position of bullet spawn point
+        bullet.set_global_position(self.bullet_spawn.get_global_position());
+
+        // set random spreading
+        let mut rng: Gd<RandomNumberGenerator> = RandomNumberGenerator::new_gd();
+        let spread: f32 = rng.randf_range(-self.spread, self.spread);
+
+        bullet.set_rotation(base.get_rotation() + f32::consts::PI / 2.0 + spread);
+        bullet.set_velocity(
+            Vector2::from_angle(player_rotation)
+                .rotated(spread)
+                .normalized_or_zero(),
+        );
+
+        self.root.add_child(&bullet);
     }
 }

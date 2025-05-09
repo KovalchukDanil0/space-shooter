@@ -8,8 +8,9 @@ use crate::player::Player;
 #[derive(GodotClass)]
 #[class(base=CanvasLayer)]
 pub struct UI {
-    health_instance: Gd<PackedScene>,
-    health_container: Option<Gd<HBoxContainer>>,
+    health_instance: OnReady<Gd<PackedScene>>,
+    health_container: OnReady<Gd<HBoxContainer>>,
+    player: OnReady<Gd<Player>>,
 
     base: Base<CanvasLayer>,
 }
@@ -18,71 +19,62 @@ pub struct UI {
 impl ICanvasLayer for UI {
     fn init(base: Base<CanvasLayer>) -> Self {
         UI {
-            health_instance: load("res://instances/health.tscn"),
-            health_container: None,
+            health_instance: OnReady::new(|| load("res://instances/health.tscn")),
+            health_container: OnReady::node("HealthContainer"),
+            player: OnReady::from_base_fn(|base: &Gd<Node>| {
+                base.get_tree()
+                    .unwrap()
+                    .get_first_node_in_group("player")
+                    .unwrap()
+                    .cast::<Player>()
+            }),
+
             base,
         }
     }
 
     fn ready(&mut self) {
-        let health_instance: Gd<PackedScene> = self.health_instance.clone();
+        self.init_health();
+    }
+}
 
-        let mut health_container: Gd<HBoxContainer> = self
-            .base_mut()
-            .get_node_as::<HBoxContainer>("HealthContainer");
-
-        let mut tree: Gd<SceneTree> = health_container.get_tree().unwrap();
-
-        let mut player: Gd<Player> = tree
-            .get_first_node_in_group("player")
-            .unwrap()
-            .cast::<Player>();
-
-        let player_health: i32 = player.bind_mut().get_health();
+#[godot_api]
+impl UI {
+    fn init_health(&mut self) {
+        let player_health: i32 = self.player.bind_mut().get_health();
 
         for x in 1..player_health + 1 {
             let mut health_instance: Gd<TextureRect> =
-                health_instance.instantiate().unwrap().cast::<TextureRect>();
+                self.health_instance.instantiate_as::<TextureRect>();
+
             health_instance.set_position(Vector2 {
                 x: 20.0 * x as f32,
                 y: 20.0,
             });
 
-            health_container.add_child(&health_instance);
+            self.health_container.add_child(&health_instance);
         }
-
-        self.health_container = Some(health_container);
     }
 
-    fn process(&mut self, delta: f64) {}
-}
-
-#[godot_api]
-impl UI {
-    #[func]
     pub fn change_health(&mut self, amount: i32) {
         // TODO: debug
 
-        let health_container: &mut Gd<HBoxContainer> = self.health_container.as_mut().unwrap();
-
-        let current_health: i32 = health_container.get_child_count();
+        let current_health: i32 = self.health_container.get_child_count();
 
         if amount > 0 {
             // Remove health nodes
             for _ in 0..amount {
-                if let Some(mut last_child) = health_container.get_child(current_health - 1) {
+                if let Some(mut last_child) = self.health_container.get_child(current_health - 1) {
                     last_child.queue_free();
                 }
             }
         } else if amount < 0 {
             // Add health nodes
             for _ in 0..amount {
-                let health_instance: Gd<TextureRect> = self
-                    .health_instance
-                    .instantiate()
-                    .unwrap()
-                    .cast::<TextureRect>();
-                health_container.add_child(&health_instance);
+                let health_instance: Gd<TextureRect> =
+                    self.health_instance.instantiate_as::<TextureRect>();
+
+                self.health_container.add_child(&health_instance);
             }
         }
     }

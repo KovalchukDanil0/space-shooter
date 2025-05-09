@@ -8,13 +8,22 @@ use godot::{
 #[class(base=CharacterBody2D)]
 pub struct Bullet {
     speed: f32,
+    life_time: f64,
+
+    delete_timer: OnReady<Gd<Timer>>,
+
     base: Base<CharacterBody2D>,
 }
 
 #[godot_api]
 impl ICharacterBody2D for Bullet {
     fn init(base: Base<CharacterBody2D>) -> Self {
-        Bullet { speed: 400.0, base }
+        Bullet {
+            speed: 800.0,
+            life_time: 5.0,
+            delete_timer: OnReady::node("DeleteTimer"),
+            base,
+        }
     }
 
     fn ready(&mut self) {
@@ -29,11 +38,13 @@ impl ICharacterBody2D for Bullet {
             }
         };
 
-        let mut timer: Gd<Timer> = self.base().get_node_as::<Timer>("DeleteTimer");
+        self.delete_timer.set_wait_time(self.life_time);
 
         // Create a proper callable that can be used with connect
         let callable: Callable = Callable::from_local_fn("on_timer_timeout", on_timer_timeout);
-        timer.connect("timeout", &callable);
+        self.delete_timer.connect("timeout", &callable);
+
+        self.delete_timer.start();
     }
 
     fn process(&mut self, delta: f64) {
