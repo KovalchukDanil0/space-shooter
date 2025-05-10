@@ -1,10 +1,9 @@
-use std::sync::{Arc, Mutex};
-
 use godot::{
     classes::{IRigidBody2D, RigidBody2D, Timer, VisibleOnScreenNotifier2D},
     obj::BaseRef,
     prelude::*,
 };
+use std::sync::{Arc, Mutex};
 
 #[derive(GodotClass)]
 #[class(base=RigidBody2D)]
