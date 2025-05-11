@@ -10,10 +10,11 @@ config_version=5
 
 [application]
 
-config/name="space-shooter"
+config/name="Space Shooter"
+config/version="1.0"
 run/main_scene="uid://bskgno25qnevg"
 config/features=PackedStringArray("4.4", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon="uid://btm2vd4kodxgu"
 
 [dotnet]
 

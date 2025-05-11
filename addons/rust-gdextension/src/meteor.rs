@@ -22,7 +22,7 @@ pub struct Meteor {
 impl IRigidBody2D for Meteor {
     fn init(base: Base<RigidBody2D>) -> Self {
         Meteor {
-            speed: 100.0,
+            speed: 300.0,
             velocity: Vector2::ZERO,
             screen_notifier: OnReady::node("VisibleOnScreenNotifier2D"),
 
@@ -34,7 +34,7 @@ impl IRigidBody2D for Meteor {
     }
 
     fn ready(&mut self) {
-        self.init_screen_notifier();
+        self.init_death_timers();
     }
 
     fn process(&mut self, _delta: f64) {
@@ -44,7 +44,7 @@ impl IRigidBody2D for Meteor {
 }
 
 impl Meteor {
-    fn init_screen_notifier(&mut self) {
+    fn init_death_timers(&mut self) {
         self.delete_timer.set_wait_time(self.lifetime);
         self.delete_timer.start();
 
@@ -64,13 +64,12 @@ impl Meteor {
         let on_timer_timeout = {
             let mut base: Gd<RigidBody2D> = base.clone();
 
-            let not_visible: Arc<Mutex<bool>> = not_visible.clone();
+            let not_visible: bool = not_visible.clone().lock().unwrap().get_property();
             let mut delete_timer: Gd<Timer> = self.delete_timer.clone();
 
             move |_: &[&Variant]| -> Result<Variant, ()> {
-                if not_visible.lock().unwrap().get_property() {
+                if not_visible {
                     base.queue_free();
-                    godot_print!("I am not on the screen");
                 } else {
                     delete_timer.start();
                 }

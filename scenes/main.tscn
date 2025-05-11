@@ -1,7 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://bskgno25qnevg"]
+[gd_scene load_steps=3 format=3 uid="uid://bskgno25qnevg"]
 
 [ext_resource type="PackedScene" uid="uid://dico8utbs8fic" path="res://instances/player.tscn" id="1_tbgi4"]
-[ext_resource type="PackedScene" uid="uid://db1857d55f75x" path="res://instances/meteor.tscn" id="6_o6xl0"]
 [ext_resource type="PackedScene" uid="uid://doghw687efpw2" path="res://instances/ui.tscn" id="6_tefeu"]
 
 [node name="Main" type="Node2D"]
@@ -9,18 +8,6 @@
 [node name="Player" parent="." instance=ExtResource("1_tbgi4")]
 
 [node name="UI" parent="." instance=ExtResource("6_tefeu")]
-
-[node name="Meteor4" parent="." instance=ExtResource("6_o6xl0")]
-position = Vector2(-469, -205)
-
-[node name="Meteor3" parent="." instance=ExtResource("6_o6xl0")]
-position = Vector2(343, -141)
-
-[node name="Meteor2" parent="." instance=ExtResource("6_o6xl0")]
-position = Vector2(-389, 158)
-
-[node name="Meteor" parent="." instance=ExtResource("6_o6xl0")]
-position = Vector2(178, 123)
 
 [node name="MeteorSpawner" type="MeteorSpawner" parent="."]
 

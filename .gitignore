@@ -451,4 +451,4 @@ FodyWeavers.xsd
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio,visualstudiocode,rust,rust-analyzer,godot
 
-build/
+/build/
